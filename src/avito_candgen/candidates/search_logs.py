@@ -69,6 +69,22 @@ class QueryLogModel:
         m.eliminate_zeros()
         return _row_normalize(m)
 
+    def dense_neighbors(self, q_emb: np.ndarray, text_emb: np.ndarray, temp: float = 0.02) -> sp.csr_matrix:
+        """То же, что neighbors, но по эмбеддингам: ловит перефразирования без общих слов."""
+        n = self.n_neighbors
+        rows, cols, vals = [], [], []
+        for st in range(0, len(q_emb), 1024):
+            sims = q_emb[st : st + 1024] @ text_emb.T
+            top = np.argpartition(-sims, n, axis=1)[:, :n]
+            v = np.take_along_axis(sims, top, 1)
+            # косинусы e5 лежат в узкой полосе, поэтому вес — по отставанию от лучшего соседа
+            w = np.exp((v - v.max(1, keepdims=True)) / temp) * np.log1p(self.text_freq_[top])
+            rows.append(np.repeat(np.arange(st, st + len(top)), n)), cols.append(top.ravel()), vals.append(w.ravel())
+        m = sp.csr_matrix(
+            (np.concatenate(vals), (np.concatenate(rows), np.concatenate(cols))), shape=(len(q_emb), len(self.texts_))
+        )
+        return _row_normalize(m)
+
     def best_similarity(self, queries: Sequence[str]) -> np.ndarray:
         return self.text_bm25_.scores(self.text_bm25_.query_matrix([tokens(t) for t in queries])).max(1)
 

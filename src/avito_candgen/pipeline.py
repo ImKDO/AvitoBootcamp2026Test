@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+from .candidates.embeddings import embed, item_texts, query_texts
 from .candidates.generator import CandidateGenerator
 from .data.load import load_benchmark, load_items
 from .data.split import make_split
@@ -23,13 +24,17 @@ class Workspace:
         if self._generator is None:
             # локации бенчмарка заводим в модель, даже если их нет в логах
             locs = np.concatenate([self.split.labelled["search_location_id"], self.benchmark["search_location_id"]])
-            self._generator = CandidateGenerator().fit(self.split.knowledge, self.items, locs)
+            log_texts = pd.Series(pd.unique(self.split.knowledge["search_query"]))
+            item_emb = embed("items", item_texts(self.items))
+            log_emb = embed("logs", query_texts(log_texts))
+            self._generator = CandidateGenerator().fit(self.split.knowledge, self.items, item_emb, log_emb, locs)
         return self._generator
 
     def _pool(self, name: str, queries: pd.DataFrame) -> pd.DataFrame:
         path = cache_path(f"pool_{name}.parquet")
         if not path.exists():
-            self.generator.pool(queries).to_parquet(path)
+            q_emb = embed(name, query_texts(queries["search_query"]))
+            self.generator.pool(queries, q_emb).to_parquet(path)
         return pd.read_parquet(path)
 
     def labelled_pool(self) -> tuple[pd.DataFrame, np.ndarray]:

@@ -6,7 +6,7 @@ from .location import LocationModel
 from .search_logs import QueryLogModel
 
 MC_EPS = 1e-4
-RANKED_SIGNALS = ["blend", "bm25", "expansion", "mc_logp", "loc_prob"]
+RANKED_SIGNALS = ["blend", "bm25", "expansion", "mc_logp", "loc_prob", "dense"]
 
 
 def item_features(items: pd.DataFrame, fields: dict, item_mc: np.ndarray, mc_global: np.ndarray) -> pd.DataFrame:

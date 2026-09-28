@@ -17,7 +17,8 @@ LOC_WEIGHT = 3.0
 LOC_EPS = 1e-4
 CHUNK = 128  # матрица 128 × 189k спокойно влезает в память
 # сколько объявлений каждый источник кладёт в пул
-SOURCES = {"blend": 300, "lexical_global": 20, "expansion_loc": 50}
+SOURCES = {"blend": 300, "lexical_global": 20, "expansion_loc": 50, "dense_loc": 100}
+DENSE_WEIGHT = 80.0
 
 
 @dataclass
@@ -33,13 +34,17 @@ class QueryBatch:
     filter_mc_dist: np.ndarray  # P(микрокатегория | фильтры)
     expansion_terms: sp.csr_matrix  # слова заголовков, выбранных по похожим запросам
     location: np.ndarray
+    q_emb: np.ndarray  # эмбеддинги запросов
+    mc_dense: np.ndarray  # P(микрокатегория | запрос) по соседям-эмбеддингам
+    expansion_dense: sp.csr_matrix
 
 
 class CandidateGenerator:
     """Отбирает из корпуса ~300 кандидатов на запрос и считает для них признаки."""
 
-    def fit(self, knowledge: pd.DataFrame, items: pd.DataFrame, extra_search_locs=()):
+    def fit(self, knowledge, items, item_emb: np.ndarray, log_emb: np.ndarray, extra_search_locs=()):
         self.items = items
+        self.item_emb, self.log_emb = item_emb, log_emb
         self.item_ids = items["item_id"].to_numpy()
         fields = item_tokens(items)
         self.bm25 = FieldedBM25().fit(fields, FIELD_WEIGHTS)
@@ -54,9 +59,9 @@ class CandidateGenerator:
         self.item_feats = item_features(items, fields, self.item_mc, self.logs.mc_global_)
         return self
 
-    def pool(self, queries: pd.DataFrame) -> pd.DataFrame:
+    def pool(self, queries: pd.DataFrame, q_emb: np.ndarray) -> pd.DataFrame:
         """Пул кандидатов с признаками: строка на пару (запрос, объявление)."""
-        batch = self._prepare(queries)
+        batch = self._prepare(queries, q_emb)
         frames = []
         for start in range(0, len(queries), CHUNK):
             rows = slice(start, min(start + CHUNK, len(queries)))
@@ -72,12 +77,13 @@ class CandidateGenerator:
             pool[c] = qf[c].to_numpy()[pool["q"]]
         return pool
 
-    def _prepare(self, queries: pd.DataFrame) -> QueryBatch:
+    def _prepare(self, queries: pd.DataFrame, q_emb: np.ndarray) -> QueryBatch:
         text = queries["search_query"].tolist()
         filters = queries["search_infm_params_text"].tolist()
         toks = [tokens(t) for t in text]
         terms = self.bm25.query_matrix(toks)
         neighbors = self.logs.neighbors(text)
+        dense_nbrs = self.logs.dense_neighbors(q_emb, self.log_emb)
         return QueryBatch(
             tokens=toks,
             terms=terms,
@@ -88,6 +94,9 @@ class CandidateGenerator:
             filter_mc_dist=self.logs.params_microcat_dist(filters).astype(np.float32),
             expansion_terms=self.logs.expansion(neighbors),
             location=self.location.index(queries["search_location_id"]),
+            q_emb=q_emb,
+            mc_dense=self.logs.microcat_dist(dense_nbrs).astype(np.float32),
+            expansion_dense=self.logs.expansion(dense_nbrs),
         )
 
     def _signals(self, b: QueryBatch, rows: slice) -> tuple[dict, dict]:
@@ -111,7 +120,12 @@ class CandidateGenerator:
         # жёсткий фильтр терял объявления из соседних городов (0.69 против 0.83).
         loc = LOC_WEIGHT * np.log(s["loc_prob"] + LOC_EPS)
         s["blend"] = s["bm25"] + loc + s["mc_logp"] + s["expansion"]
-        derived = {"expansion_loc": s["expansion"] + loc}
+        # эмбеддинги ловят перефразирования: «аренда помещения на праздник» → «пространство для мероприятий»
+        s["dense"] = b.q_emb[rows] @ self.item_emb.T
+        s["blend"] = s["blend"] + DENSE_WEIGHT * s["dense"]
+        s["mc_logp_dense"] = np.log(b.mc_dense[rows][:, self.item_mc] + MC_EPS)
+        s["expansion_dense"] = (b.expansion_dense[rows] @ self.bm25.doc_matrix_).toarray()
+        derived = {"expansion_loc": s["expansion"] + loc, "dense_loc": DENSE_WEIGHT * s["dense"] + loc + s["mc_logp"]}
         return s, derived
 
     def _select(self, signals: dict, derived: dict, rows: slice) -> pd.DataFrame:

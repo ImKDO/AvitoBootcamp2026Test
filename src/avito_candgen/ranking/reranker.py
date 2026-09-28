@@ -37,9 +37,9 @@ def _downsample(pool: pd.DataFrame, y: np.ndarray, seed: int) -> np.ndarray:
 
 
 class Reranker:
-    """LightGBM поверх пула кандидатов, скор — среднее по нескольким сидам."""
+    """LightGBM поверх пула кандидатов; при нескольких сидах скор — среднее."""
 
-    def __init__(self, seeds=(0, 1, 2)):
+    def __init__(self, seeds=(0,)):
         self.seeds = seeds
 
     def fit(self, pool: pd.DataFrame, y: np.ndarray):

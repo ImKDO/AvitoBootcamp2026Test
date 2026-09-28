@@ -12,6 +12,8 @@ dependencies = [
     "scikit-learn>=1.5",
     "pystemmer>=3.1.0",
     "lightgbm>=4.7.0",
+    "sentence-transformers>=5",
+    "torch>=2.14.0",
 ]
 
 [project.scripts]
