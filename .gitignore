@@ -1,0 +1,8 @@
+__pycache__/
+.pytest_cache/
+.venv/
+.DS_Store
+
+# данные — по ссылке из TASK.md; кэш пересобирается сам
+/data/
+/cache/
