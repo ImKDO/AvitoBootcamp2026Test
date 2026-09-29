@@ -1,3 +1,5 @@
+"""Чтение parquet-файлов задачи."""
+
 import pandas as pd
 
 from ..paths import ITEMS_PATH, QUERIES_PATH, TRAIN_PATH

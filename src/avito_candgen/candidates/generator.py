@@ -1,3 +1,5 @@
+"""Первая ступень: сигналы против всего корпуса → пул ~330 кандидатов на запрос с признаками."""
+
 from dataclasses import dataclass
 
 import numpy as np

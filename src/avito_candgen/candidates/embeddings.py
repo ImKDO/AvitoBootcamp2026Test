@@ -1,3 +1,5 @@
+"""Эмбеддинги multilingual-e5-small для запросов, объявлений и запросов из логов."""
+
 import subprocess
 import sys
 

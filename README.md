@@ -125,3 +125,16 @@ src/avito_candgen/
 
 Формат `answer.csv`: `query_id`, `answer` — до 50 `item_id` через пробел, по убыванию
 уверенности.
+
+## Open-source компоненты
+
+Всё работает локально, внешние API не используются.
+
+- `intfloat/multilingual-e5-small` (лицензия MIT) через `sentence-transformers` + `torch` —
+  эмбеддинги. Веса (~470 МБ) скачиваются с Hugging Face один раз при первом запуске,
+  дальше работает без сети.
+- `lightgbm` — реранкер.
+- `scikit-learn` (`CountVectorizer`), `scipy` — словарь и sparse-матрицы для BM25
+  (сам BM25 реализован в проекте).
+- `PyStemmer` — стемминг Snowball для русского и английского.
+- `pandas`, `pyarrow`, `numpy` — данные.

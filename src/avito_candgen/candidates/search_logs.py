@@ -1,3 +1,5 @@
+"""Знания из логов поиска: похожие запросы, их микрокатегории и слова выбранных объявлений."""
+
 from collections.abc import Sequence
 
 import numpy as np

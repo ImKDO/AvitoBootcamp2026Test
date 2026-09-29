@@ -1,3 +1,5 @@
+"""BM25 по полям объявления: заголовок, параметры, описание."""
+
 from collections.abc import Sequence
 
 import numpy as np

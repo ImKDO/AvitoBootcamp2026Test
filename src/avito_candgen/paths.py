@@ -1,3 +1,5 @@
+"""Пути к данным, кэшу и answer.csv."""
+
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]

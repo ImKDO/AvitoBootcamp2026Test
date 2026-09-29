@@ -1,3 +1,5 @@
+"""Разбиение train на логи поиска (knowledge) и валидацию на настоящем корпусе (labelled)."""
+
 from dataclasses import dataclass
 
 import numpy as np

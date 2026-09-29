@@ -1,3 +1,5 @@
+"""Оценка качества: Recall@50, кросс-валидация реранкера, поправка на состав бенчмарка."""
+
 from collections.abc import Sequence
 
 import numpy as np

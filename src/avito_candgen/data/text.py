@@ -1,3 +1,5 @@
+"""Нормализация и стемминг текста, токены полей объявлений."""
+
 import re
 from functools import lru_cache
 

@@ -1,3 +1,5 @@
+"""Точки входа: avito-predict (обучение и answer.csv) и avito-cv (оценка на валидации)."""
+
 import time
 
 import pandas as pd
